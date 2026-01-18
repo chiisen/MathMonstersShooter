@@ -1,11 +1,21 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+import { TTSManager } from '../logic/TTSManager.js'
+
 defineProps({
   options: {
     type: Array,
     default: () => []
   }
 })
-defineEmits(['answer'])
+const emit = defineEmits(['answer'])
+const { locale } = useI18n()
+
+const onAnswerClick = (opt) => {
+    // Speak the number (or text)
+    TTSManager.speak(opt.toString(), locale.value)
+    emit('answer', opt)
+}
 </script>
 
 <template>
@@ -16,7 +26,7 @@ defineEmits(['answer'])
           v-for="opt in options" 
           :key="opt" 
           class="option-btn"
-          @click="$emit('answer', opt)"
+          @click="onAnswerClick(opt)"
         >
           {{ opt }}
         </button>
