@@ -66,6 +66,18 @@ const onGameOver = (finalScore, winStatus = false) => {
     }
 }
 const onWrong = () => {
+    // Random wrong phrases
+    const phrases = ['差一點', '錯了', '不對唷', '唉', '怎麼可能'];
+    const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+    if (locale.value === 'zh') {
+        TTSManager.speak(randomPhrase, 'zh');
+    } else {
+        const enPhrases = ['Almost!', 'Wrong!', 'Not right!', 'Oh no!', 'Impossible!'];
+        const idx = phrases.indexOf(randomPhrase);
+        TTSManager.speak(enPhrases[idx > -1 ? idx : 0], 'en');
+    }
+
     if(el) {
         el.classList.add('shake')
         setTimeout(() => el.classList.remove('shake'), 300)

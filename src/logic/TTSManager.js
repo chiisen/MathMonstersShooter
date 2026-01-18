@@ -18,7 +18,7 @@ export class TTSManager {
         utterance.lang = locale === 'zh' ? 'zh-TW' : 'en-US';
 
         // Adjust properties for better clarity for kids
-        utterance.rate = 0.9; // Slightly slower
+        utterance.rate = 1.5; // Slightly faster for game pacing
         utterance.pitch = 1.1; // Slightly higher pitch (friendly)
 
         window.speechSynthesis.speak(utterance);
