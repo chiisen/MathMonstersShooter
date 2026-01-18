@@ -1,15 +1,26 @@
 <script setup>
-defineProps({
+import { useI18n } from 'vue-i18n'
+import { TTSManager } from '../logic/TTSManager.js'
+
+const props = defineProps({
   score: Number,
   lives: Number
 })
+
+const emit = defineEmits(['pause'])
+const { t, locale } = useI18n()
+
+const onPauseClick = () => {
+    TTSManager.speak(t('paused'), locale.value)
+    emit('pause')
+}
 </script>
 
 <template>
   <div class="hud">
     <div class="score">{{ $t('score') }} <span class="val">{{ score }}</span></div>
     <div class="lives-container">
-        <button class="pause-btn" @click="$emit('pause')">⏸</button>
+        <button class="pause-btn" @click="onPauseClick">⏸</button>
         <div class="lives">
         {{ $t('lives') }} 
         <span v-for="n in lives" :key="n" class="heart">❤️</span>

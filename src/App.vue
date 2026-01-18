@@ -1,15 +1,22 @@
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GameCanvas from './components/GameCanvas.vue'
 import GameHUD from './components/GameHUD.vue'
 import AnswerPanel from './components/AnswerPanel.vue'
 import StartScreen from './components/StartScreen.vue'
+import { TTSManager } from './logic/TTSManager.js'
 
+const { t, locale } = useI18n()
 const gameState = ref('start') // start, playing, gameover
 const score = ref(0)
 const lives = ref(3)
 const currentOptions = ref([])
 const gameCanvas = ref(null)
+
+const speak = (key) => {
+    TTSManager.speak(t(key), locale.value)
+}
 
 const startGame = () => {
     gameState.value = 'playing'
@@ -17,6 +24,30 @@ const startGame = () => {
     lives.value = 3
     currentOptions.value = []
 }
+
+// ... (keep existing methods)
+
+const onStartClick = () => {
+    speak('start')
+    startGame()
+}
+
+const onResumeClick = () => {
+    speak('resume')
+    resumeGame()
+}
+
+const onExitClick = () => {
+    speak('exit')
+    gameState.value = 'start'
+}
+
+const onRetryClick = () => {
+    speak('retry')
+    startGame()
+}
+
+// ... 
 
 const onScore = (val) => score.value = val
 const onLives = (val) => lives.value = val
@@ -62,7 +93,7 @@ const resumeGame = () => {
         @wrong="onWrong"
     />
     
-    <StartScreen v-if="gameState === 'start'" @start="startGame" />
+    <StartScreen v-if="gameState === 'start'" @start="onStartClick" />
     
     <div v-if="gameState === 'playing'">
         <GameHUD :score="score" :lives="lives" @pause="onPause" />
@@ -72,15 +103,15 @@ const resumeGame = () => {
     <div v-if="gameState === 'gameover'" class="gameover-screen glass">
         <h1 class="neon-text" style="color: #ff3366">{{ $t('game_over') }}</h1>
         <h2>{{ $t('final_score') }} {{ score }}</h2>
-        <button class="neon-button" @click="startGame">{{ $t('retry') }}</button>
+        <button class="neon-button" @click="onRetryClick">{{ $t('retry') }}</button>
     </div>
 
     <!-- Pause Menu -->
     <div v-if="gameState === 'paused'" class="pause-screen glass">
         <h1 class="neon-text">{{ $t('paused') }}</h1>
-        <button class="neon-button" @click="resumeGame">{{ $t('resume') }}</button>
+        <button class="neon-button" @click="onResumeClick">{{ $t('resume') }}</button>
         <div style="height: 20px"></div>
-        <button class="neon-button" @click="gameState = 'start'">{{ $t('exit') }}</button>
+        <button class="neon-button" @click="onExitClick">{{ $t('exit') }}</button>
     </div>
   </div>
 </template>

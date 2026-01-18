@@ -1,11 +1,24 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+import { TTSManager } from '../logic/TTSManager.js'
+
 defineEmits(['start'])
+const { locale, t } = useI18n()
+
+const speak = (text) => {
+    TTSManager.speak(text, locale.value)
+}
+
+const toggleLang = () => {
+    locale.value = locale.value === 'zh' ? 'en' : 'zh';
+    speak(locale.value === 'zh' ? '切換為中文' : 'Switched to English');
+}
 </script>
 
 <template>
   <div class="start-screen glass">
     <div class="lang-switch">
-        <button @click="$i18n.locale = $i18n.locale === 'zh' ? 'en' : 'zh'">
+        <button @click="toggleLang">
             {{ $i18n.locale === 'zh' ? 'EN' : '中文' }}
         </button>
     </div>
