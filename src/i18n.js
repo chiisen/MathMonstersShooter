@@ -12,7 +12,10 @@ const messages = {
         game_over: 'GAME OVER',
         final_score: 'FINAL SCORE:',
         retry: 'RETRY MISSION',
-        loading: 'Game Loading...'
+        loading: 'Game Loading...',
+        paused: 'PAUSED',
+        resume: 'RESUME',
+        exit: 'EXIT'
     },
     zh: {
         title: '數學怪物',
@@ -25,7 +28,10 @@ const messages = {
         game_over: '遊戲結束',
         final_score: '最終分數:',
         retry: '重新任務',
-        loading: '遊戲載入中...'
+        loading: '遊戲載入中...',
+        paused: '遊戲暫停',
+        resume: '繼續遊戲',
+        exit: '離開遊戲'
     }
 }
 

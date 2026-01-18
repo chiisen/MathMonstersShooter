@@ -7,11 +7,13 @@ defineProps({
 
 <template>
   <div class="hud">
-    <button class="pause-btn" @click="$emit('pause')">⏸</button>
     <div class="score">{{ $t('score') }} <span class="val">{{ score }}</span></div>
-    <div class="lives">
-      {{ $t('lives') }} 
-      <span v-for="n in lives" :key="n" class="heart">❤️</span>
+    <div class="lives-container">
+        <button class="pause-btn" @click="$emit('pause')">⏸</button>
+        <div class="lives">
+        {{ $t('lives') }} 
+        <span v-for="n in lives" :key="n" class="heart">❤️</span>
+        </div>
     </div>
   </div>
 </template>
@@ -33,14 +35,18 @@ defineProps({
   font-size: 2rem;
   font-weight: bold;
   color: var(--primary-color);
-  /* No absolute positioning needed anymore */
+}
+
+.lives-container {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Space between pause button and lives text */
 }
 
 .lives {
   font-size: 1.5rem;
   font-weight: bold;
   color: #ff3366;
-  /* No absolute positioning needed anymore */
 }
 
 .val {
@@ -52,22 +58,20 @@ defineProps({
 }
 
 .pause-btn {
-    pointer-events: auto; /* Enable clicks */
-    position: absolute;
-    top: 5px;
-    right: 20px;
+    pointer-events: auto;
     background: transparent;
     border: 2px solid var(--primary-color);
     color: var(--primary-color);
-    font-size: 1.5rem;
-    width: 40px;
-    height: 40px;
+    font-size: 1.2rem;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     transition: all 0.2s;
+    /* Removed absolute positioning */
 }
 .pause-btn:hover {
     background: var(--primary-color);

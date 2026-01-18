@@ -77,10 +77,10 @@ const resumeGame = () => {
 
     <!-- Pause Menu -->
     <div v-if="gameState === 'paused'" class="pause-screen glass">
-        <h1 class="neon-text">PAUSED</h1>
-        <button class="neon-button" @click="resumeGame">RESUME</button>
+        <h1 class="neon-text">{{ $t('paused') }}</h1>
+        <button class="neon-button" @click="resumeGame">{{ $t('resume') }}</button>
         <div style="height: 20px"></div>
-        <button class="neon-button" @click="gameState = 'start'">EXIT</button>
+        <button class="neon-button" @click="gameState = 'start'">{{ $t('exit') }}</button>
     </div>
   </div>
 </template>
