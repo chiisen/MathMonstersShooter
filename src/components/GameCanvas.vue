@@ -6,7 +6,7 @@ const props = defineProps({
   active: Boolean
 })
 
-const emit = defineEmits(['score', 'lives', 'gameover', 'options', 'wrong'])
+const emit = defineEmits(['score', 'lives', 'gameover', 'options', 'wrong', 'correct'])
 
 const canvasRef = ref(null)
 let engine = null
@@ -18,7 +18,8 @@ onMounted(() => {
       onLives: (l) => emit('lives', l),
       onGameOver: (s) => emit('gameover', s),
       onOptions: (opts) => emit('options', opts),
-      onWrongAnswer: () => emit('wrong')
+      onWrongAnswer: () => emit('wrong'),
+      onCorrectAnswer: () => emit('correct')
     }
     
     engine = new GameEngine(canvasRef.value, callbacks)

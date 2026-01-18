@@ -257,6 +257,7 @@ export class GameEngine {
                     this.entityManager.createExplosion(m.x, m.y, m.color);
                     this.score += 10;
                     this.callbacks.onScore(this.score);
+                    this.callbacks.onCorrectAnswer && this.callbacks.onCorrectAnswer();
                 }
             }
         }

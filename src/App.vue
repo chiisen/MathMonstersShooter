@@ -66,10 +66,26 @@ const onGameOver = (finalScore, winStatus = false) => {
     }
 }
 const onWrong = () => {
-    const el = document.getElementById('app-container')
     if(el) {
         el.classList.add('shake')
         setTimeout(() => el.classList.remove('shake'), 300)
+    }
+}
+
+const onCorrect = () => {
+    // Random praise phrases
+    const praises = ['好棒', '讚', '真厲害', '完美', '一百分'];
+    const randomPraise = praises[Math.floor(Math.random() * praises.length)];
+    // Only speak praise if locale is Chinese, or maybe translate them for EN?
+    // Requirement said: "好棒、讚、真厲害、完美、一百分" which are Chinese.
+    // If EN, we could use equivalents or just skip. Let's use English equivalents if EN.
+    if (locale.value === 'zh') {
+        TTSManager.speak(randomPraise, 'zh');
+    } else {
+        const enPraises = ['Great!', 'Good job!', 'Awesome!', 'Perfect!', 'One hundred percent!'];
+        // Map indices broadly
+        const idx = praises.indexOf(randomPraise);
+        TTSManager.speak(enPraises[idx > -1 ? idx : 0], 'en');
     }
 }
 
@@ -100,6 +116,7 @@ const resumeGame = () => {
         @options="onOptions"
         @gameover="onGameOver"
         @wrong="onWrong"
+        @correct="onCorrect"
     />
     
     <StartScreen v-if="gameState === 'start'" @start="onStartClick" />
