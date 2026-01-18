@@ -63,6 +63,7 @@ export const SoundManager = {
     },
 
     explosion() {
+        if (this.muted) return; // Check muted flag
         this.init();
         if (this.ctx.state === 'suspended') this.ctx.resume();
 
@@ -84,6 +85,7 @@ export const SoundManager = {
     },
 
     wrong() {
+        if (this.muted) return; // Check muted flag
         this.init();
         if (this.ctx.state === 'suspended') this.ctx.resume();
 
