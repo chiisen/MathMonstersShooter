@@ -301,6 +301,8 @@ const resumeGame = () => {
   border: 2px solid var(--primary-color);
   background: rgba(18, 18, 18, 0.95);
   z-index: 20;
+  width: 90%;
+  max-width: 450px;
 }
 .pause-screen h1 {
   font-size: 2rem;
