@@ -17,6 +17,8 @@ const lives = ref(3) // 剩餘生命
 const currentOptions = ref([]) // 當前顯示的答案選項
 const gameCanvas = ref(null) // 對 GameCanvas 組件的引用
 const isWin = ref(false) // 是否為勝利通關狀態
+const highScore = ref(0) // 最高分數
+const isNewRecord = ref(false) // 是否破紀錄
 
 /**
  * 調用 TTS 播放多國語言文字
@@ -95,6 +97,10 @@ const handleInteraction = () => {
 // 組件掛載與卸載時管理事件監聽
 onMounted(() => {
     document.addEventListener('click', handleInteraction);
+    
+    // 載入最高分數
+    const saved = localStorage.getItem('mathMonstersHighScore')
+    if (saved) highScore.value = parseInt(saved, 10)
 })
 
 onUnmounted(() => {
@@ -116,6 +122,15 @@ const onGameOver = (finalScore, winStatus = false) => {
     score.value = finalScore
     isWin.value = winStatus
     gameState.value = 'gameover'
+    
+    // 檢查並更新最高分數
+    if (finalScore > highScore.value) {
+        highScore.value = finalScore
+        isNewRecord.value = true
+        localStorage.setItem('mathMonstersHighScore', finalScore.toString())
+    } else {
+        isNewRecord.value = false
+    }
     
     // 語音宣告結果
     if (winStatus) {
@@ -200,7 +215,7 @@ const resumeGame = () => {
         @correct="onCorrect"
     />
     
-    <StartScreen v-if="gameState === 'start'" @start="onStartClick" />
+    <StartScreen v-if="gameState === 'start'" :high-score="highScore" @start="onStartClick" />
     
     <div v-if="gameState === 'playing'">
         <GameHUD :score="score" :lives="lives" @pause="onPause" />
@@ -212,6 +227,8 @@ const resumeGame = () => {
             {{ isWin ? $t('you_win') : $t('game_over') }}
         </h1>
         <h2>{{ $t('final_score') }} {{ score }}</h2>
+        <p v-if="isNewRecord" class="new-record">{{ $t('new_record') }}</p>
+        <p class="high-score">{{ $t('high_score') }} {{ highScore }}</p>
         <button class="neon-button" @click="onRetryClick">{{ $t('retry') }}</button>
     </div>
 
@@ -255,8 +272,28 @@ const resumeGame = () => {
 }
 .gameover-screen h2 {
     font-size: 1.5rem;
-    margin: 1rem 0 3rem 0;
+    margin: 1rem 0 1rem 0;
     color: #fff;
+}
+
+.new-record {
+    font-size: 1.2rem;
+    color: #FFD700;
+    font-weight: bold;
+    text-shadow: 0 0 10px #FFD700;
+    margin: 0.5rem 0;
+    animation: pulse 1s infinite;
+}
+
+.high-score {
+    font-size: 1rem;
+    color: #aaa;
+    margin: 0 0 2rem 0;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 .shake {

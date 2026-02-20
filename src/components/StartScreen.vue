@@ -8,6 +8,12 @@ import { ref } from 'vue'
  * 提供標題、語言切換、以及開始遊戲的入口點
  */
 const emit = defineEmits(['start']) // 發送開始遊戲事件
+const props = defineProps({
+    highScore: {
+        type: Number,
+        default: 0
+    }
+})
 const { locale, t } = useI18n()
 const version = __APP_VERSION__ // 從 Vite 配置中注入的應用程式版本號
 
@@ -58,6 +64,8 @@ const onStart = () => {
     </div>
     <h1 class="neon-text">{{ $t('title') }}</h1>
     <h2 class="neon-text">{{ $t('subtitle') }}</h2>
+    
+    <p v-if="highScore > 0" class="high-score">{{ $t('high_score') }} {{ highScore }}</p>
     
     <div class="selection-group">
         <div class="label">{{ $t('mode') }}</div>
@@ -119,6 +127,13 @@ h2 {
   margin: 0 0 1rem 0;
   color: var(--secondary-color);
   letter-spacing: 4px;
+}
+
+.high-score {
+    color: #FFD700;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
 }
 
 .selection-group {
