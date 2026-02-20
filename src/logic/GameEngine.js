@@ -8,6 +8,24 @@ import { SoundManager } from './SoundManager.js';
  * 負責處理遊戲狀態、更新邏輯、畫面渲染以及模組間的協調
  */
 export class GameEngine {
+    static PLAYER_SAFE_ZONE = 60;
+    static BASE_SPAWN_INTERVAL = 2500;
+    static MIN_SPAWN_INTERVAL = 1000;
+    static BASE_GAP = 200;
+    static MIN_GAP = 90;
+    static BULLET_BASE_RADIUS = 5;
+    static BULLET_MAX_RADIUS = 25;
+    static BULLET_RADIUS_INCREMENT = 2;
+    static WINS_SCORE_EASY = 300;
+    static WINS_SCORE_MEDIUM = 350;
+    static WINS_SCORE_HARD = 400;
+    static LEVEL_UP_SCORE = 100;
+    static SLOWDOWN_DURATION = 5000;
+    static LEVEL_REST_DURATION = 5000;
+    static SPAWN_MARGIN = 50;
+    static BASE_SPEED = 0.5;
+    static SPEED_INCREMENT = 0.1;
+
     constructor(canvas, callbacks) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -23,24 +41,24 @@ export class GameEngine {
         this.targetMonster = null; // 當前鎖定的怪物目標
         this.lastTime = 0; // 上一次更新的時間戳
         this.spawnTimer = 0; // 怪物生成計時器
-        this.spawnInterval = 2500; // 怪物生成間隔 (毫秒)
+        this.spawnInterval = GameEngine.BASE_SPAWN_INTERVAL; // 怪物生成間隔 (毫秒)
         this.slowDownTimer = 0; // 減速效果剩餘時間
         this.levelUpRestTimer = 0; // 升級後的休息緩衝時間
         this.consecutiveWrong = 0; // 連續答錯次數
         this.victoryTimer = null; // 勝利後的延遲計時器
-        this.bulletRadius = 5; // 初始子彈半徑
+        this.bulletRadius = GameEngine.BULLET_BASE_RADIUS; // 初始子彈半徑
 
         this.score = 0; // 當前分數
         this.lives = 3; // 剩餘生命
         this.level = 1; // 當前等級
         this.scaleFactor = 1; // 畫面縮放比例 (基準寬度 600px)
+        this.fontSize = 36; // 快取的字體大小
 
         this.clouds = []; // 背景雲朵
         this.initClouds();
 
         this.playerImage = new Image();
         this.playerImage.onload = () => {
-            // 圖片載入完成後，如果處於暫停或閒置狀態，強制重繪一次以顯示圖片
             if (this.state === 'idle' || this.paused) {
                 this.draw();
             }
@@ -48,15 +66,46 @@ export class GameEngine {
         this.playerImage.onerror = (e) => {
             console.error("Player ship image failed to load:", e);
         };
-        // 使用 import.meta.url 確保路徑正確解析 (雖然 public 路徑通常可行，但加上 onload 更保險)
         this.playerImage.src = './images/player_ship.png';
 
         this.monsterImage = new Image();
+        this.monsterImage.onerror = (e) => {
+            console.error("Monster image failed to load:", e);
+        };
         this.monsterImage.src = './images/monster.png';
 
         this.paused = false; // 是否暫停中
 
         this.loop = this.loop.bind(this);
+    }
+
+    /**
+     * 預先載入所有遊戲圖片
+     * @returns {Promise} 圖片載入完成後 resolve
+     */
+    preloadImages() {
+        return new Promise((resolve) => {
+            const images = [this.playerImage, this.monsterImage];
+            let loadedCount = 0;
+            
+            const checkComplete = () => {
+                loadedCount++;
+                if (loadedCount === images.length) {
+                    resolve();
+                }
+            };
+            
+            images.forEach(img => {
+                if (img.complete && img.naturalWidth !== 0) {
+                    checkComplete();
+                } else {
+                    img.onload = checkComplete;
+                    img.onerror = checkComplete;
+                }
+            });
+            
+            if (loadedCount === images.length) resolve();
+        });
     }
 
     /**
@@ -94,6 +143,9 @@ export class GameEngine {
 
         // 計算縮放比例 (以 600px 為基準)
         this.scaleFactor = Math.min(1, w / 600);
+        
+        // 更新快取的字體大小
+        this.fontSize = Math.max(16, Math.floor(24 * this.scaleFactor * 1.5));
 
         if (this.entityManager.player) {
             this.entityManager.player.x = w / 2;
@@ -106,23 +158,25 @@ export class GameEngine {
      * 開始新遊戲
      * @param {Object} settings - 包含 mode 與 difficulty
      */
-    start(settings = {}) {
+    async start(settings = {}) {
+        await this.preloadImages();
+        
         const { mode = 'add', difficulty = 'medium' } = settings;
 
         switch (difficulty) {
-            case 'easy': this.winningScore = 300; break;
-            case 'medium': this.winningScore = 350; break;
-            case 'hard': this.winningScore = 400; break;
-            default: this.winningScore = 350;
+            case 'easy': this.winningScore = GameEngine.WINS_SCORE_EASY; break;
+            case 'medium': this.winningScore = GameEngine.WINS_SCORE_MEDIUM; break;
+            case 'hard': this.winningScore = GameEngine.WINS_SCORE_HARD; break;
+            default: this.winningScore = GameEngine.WINS_SCORE_MEDIUM;
         }
 
         this.mathSystem.setMode(mode);
         if (this.victoryTimer) clearTimeout(this.victoryTimer);
         this.score = 0;
-        this.bulletRadius = 5;
+        this.bulletRadius = GameEngine.BULLET_BASE_RADIUS;
         this.lives = 3;
         this.level = 1;
-        this.spawnInterval = 2500;
+        this.spawnInterval = GameEngine.BASE_SPAWN_INTERVAL;
         this.slowDownTimer = 0;
         this.levelUpRestTimer = 0;
         this.consecutiveWrong = 0;
@@ -188,15 +242,15 @@ export class GameEngine {
                 this.bulletRadius
             );
             // 答對會增加子彈大小（威力感）
-            this.bulletRadius = Math.min(25, this.bulletRadius + 2);
+            this.bulletRadius = Math.min(GameEngine.BULLET_MAX_RADIUS, this.bulletRadius + GameEngine.BULLET_RADIUS_INCREMENT);
         } else {
             // 答錯了
             this.consecutiveWrong++;
             SoundManager.wrong();
-            this.slowDownTimer = 5000; // 減速 5 秒作為緩衝
+            this.slowDownTimer = GameEngine.SLOWDOWN_DURATION; // 減速作為緩衝
 
             // 答錯會減少子彈大小
-            this.bulletRadius = Math.max(5, this.bulletRadius - 2);
+            this.bulletRadius = Math.max(GameEngine.BULLET_BASE_RADIUS, this.bulletRadius - GameEngine.BULLET_RADIUS_INCREMENT);
 
             this.callbacks.onWrongAnswer && this.callbacks.onWrongAnswer();
         }
@@ -212,8 +266,8 @@ export class GameEngine {
 
         for (let m of this.entityManager.monsters) {
             // 忽略已死亡或太靠近玩家（已經重疊）的怪物
-            // 緩衝區設為 60px (怪物半徑 + 玩家半徑)
-            if (m.y > maxY && m.alive && m.y < (playerY - 60 * this.scaleFactor)) {
+            // 緩衝區設為 PLAYER_SAFE_ZONE px (怪物半徑 + 玩家半徑)
+            if (m.y > maxY && m.alive && m.y < (playerY - GameEngine.PLAYER_SAFE_ZONE * this.scaleFactor)) {
                 maxY = m.y;
                 lowest = m;
             }
@@ -255,11 +309,11 @@ export class GameEngine {
         }
 
         // 1. 等級管理
-        if (this.score > this.level * 100) {
+        if (this.score > this.level * GameEngine.LEVEL_UP_SCORE) {
             this.level++;
-            // 等級越高生成間隔越短，最小 1 秒
-            this.spawnInterval = Math.max(1000, 2500 - (this.level * 150));
-            this.levelUpRestTimer = 5000; // 升級後給予 5 秒的減速緩衝
+            // 等級越高生成間隔越短
+            this.spawnInterval = Math.max(GameEngine.MIN_SPAWN_INTERVAL, GameEngine.BASE_SPAWN_INTERVAL - (this.level * 150));
+            this.levelUpRestTimer = GameEngine.LEVEL_REST_DURATION;
         }
 
         // 2. 怪物生成邏輯
@@ -273,13 +327,13 @@ export class GameEngine {
         }
 
         // 基礎間隔 ~200px
-        // 規則：每擊殺一隻，間隔縮減 1% (即每 10 次擊殺縮減約 10%)
+        // 規則：每擊殺一隻，間隔縮減 1%
         const kills = Math.floor(this.score / 10);
-        const baseGap = 200;
+        const baseGap = GameEngine.BASE_GAP;
         const dynamicGap = baseGap * Math.pow(0.99, kills);
-        const minGap = Math.max(90, dynamicGap);
+        const minGap = Math.max(GameEngine.MIN_GAP, dynamicGap);
 
-        const canSpawn = (highestY === Infinity) || (highestY > (-50 + minGap));
+        const canSpawn = (highestY === Infinity) || (highestY > (-GameEngine.SPAWN_MARGIN + minGap));
 
         // 如果場上怪物少於 3 隻且間隔超過 0.5 秒，強制嘗試生成
         if (currentCount < 3 && this.spawnTimer > 500) {
@@ -347,9 +401,8 @@ export class GameEngine {
     spawnMonster() {
         const problem = this.mathSystem.generateProblem();
 
-        // 計算安全的 X 座標，避免文字超出邊界
-        const fs = Math.max(16, Math.floor(24 * this.scaleFactor * 1.5));
-        this.ctx.font = `bold ${fs}px "Arial Rounded MT Bold", "ZhuyinFont", sans-serif`;
+        // 使用快取的字體大小計算安全的 X 座標
+        this.ctx.font = `bold ${this.fontSize}px "Arial Rounded MT Bold", "ZhuyinFont", sans-serif`;
         const textW = this.ctx.measureText(problem.equation).width;
 
         const minX = textW / 2 + 20; // 20px 邊距
@@ -362,10 +415,9 @@ export class GameEngine {
             x = this.width / 2;
         }
 
-        // 速度隨擊殺數增加：基礎 0.5 + 每擊殺增加 10% (0.05)
+        // 速度隨擊殺數增加
         const kills = Math.floor(this.score / 10);
-        const baseSpeed = 0.5;
-        const speed = baseSpeed * (1 + 0.1 * kills);
+        const speed = GameEngine.BASE_SPEED * (1 + GameEngine.SPEED_INCREMENT * kills);
 
         this.entityManager.addMonster({
             x: x,
@@ -437,13 +489,15 @@ export class GameEngine {
      */
     gameWin() {
         this.state = 'gamewin';
-        SoundManager.playVictoryBGM();
-
-        // 延遲 10 秒才顯示結算畫面，讓玩家沉浸在慶祝音樂中
+        
+        // 先顯示勝利畫面
         if (this.victoryTimer) clearTimeout(this.victoryTimer);
-        this.victoryTimer = setTimeout(() => {
-            this.callbacks.onGameOver(this.score, true);
-        }, 10000);
+        this.callbacks.onGameOver(this.score, true);
+        
+        // 延遲 1 秒後播放勝利音樂
+        setTimeout(() => {
+            SoundManager.playVictoryBGM();
+        }, 1000);
     }
 
     /**
@@ -489,8 +543,7 @@ export class GameEngine {
         }
 
         // 繪製怪物
-        const fs = Math.max(16, Math.floor(24 * this.scaleFactor * 1.5));
-        this.ctx.font = `bold ${fs}px "Arial Rounded MT Bold", "ZhuyinFont", sans-serif`;
+        this.ctx.font = `bold ${this.fontSize}px "Arial Rounded MT Bold", "ZhuyinFont", sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
 
@@ -554,7 +607,7 @@ export class GameEngine {
             // 繪製瞄準提示 (下方的紅色橫線)
             if (m === this.targetMonster) {
                 const textW = this.ctx.measureText(m.equation).width;
-                const lineY = m.y + textOffsetY + (fs * 0.6); // 跟隨文字位置移動
+                const lineY = m.y + textOffsetY + (this.fontSize * 0.6);
 
                 this.ctx.strokeStyle = '#FF3366';
                 this.ctx.lineWidth = 4;
