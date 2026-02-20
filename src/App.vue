@@ -160,7 +160,7 @@ const onWrong = () => {
     const el = document.getElementById('app-container');
     if(el) {
         el.classList.add('shake')
-        setTimeout(() => el.classList.remove('shake'), 300)
+        setTimeout(() => el.classList.remove('shake'), 200)
     }
 }
 
@@ -222,7 +222,7 @@ const resumeGame = () => {
         <AnswerPanel :options="currentOptions" @answer="handleAnswer" />
     </div>
 
-    <div v-if="gameState === 'gameover'" class="gameover-screen glass">
+    <div v-if="gameState === 'gameover'" class="gameover-screen glass" :class="{ win: isWin }">
         <h1 class="neon-text" :style="{color: isWin ? '#00ff99' : '#ff3366'}">
             {{ isWin ? $t('you_win') : $t('game_over') }}
         </h1>
@@ -263,6 +263,52 @@ const resumeGame = () => {
   background: rgba(11, 15, 41, 0.95);
   z-index: 20;
   box-shadow: 0 0 50px rgba(255, 51, 102, 0.3);
+}
+
+.gameover-screen.win {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    top: 0;
+    left: 0;
+    transform: none;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(11, 15, 41, 0.98);
+}
+
+.gameover-screen.win h1 {
+    font-size: 5rem;
+    animation: winPulse 2s infinite;
+}
+
+.gameover-screen.win h2 {
+    font-size: 3rem;
+}
+
+.gameover-screen.win .high-score {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.gameover-screen.win .neon-button {
+    font-size: 2rem;
+    padding: 1rem 3rem;
+}
+
+@keyframes winPulse {
+    0%, 100% { 
+        transform: scale(1); 
+        text-shadow: 0 0 30px #00ff99;
+    }
+    50% { 
+        transform: scale(1.1); 
+        text-shadow: 0 0 60px #00ff99, 0 0 100px #00ff99;
+    }
 }
 
 .gameover-screen h1 {

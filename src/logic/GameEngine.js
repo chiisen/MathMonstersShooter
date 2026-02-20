@@ -8,23 +8,44 @@ import { SoundManager } from './SoundManager.js';
  * 負責處理遊戲狀態、更新邏輯、畫面渲染以及模組間的協調
  */
 export class GameEngine {
-    static PLAYER_SAFE_ZONE = 60;
-    static BASE_SPAWN_INTERVAL = 2500;
-    static MIN_SPAWN_INTERVAL = 1000;
-    static BASE_GAP = 200;
-    static MIN_GAP = 90;
-    static BULLET_BASE_RADIUS = 5;
-    static BULLET_MAX_RADIUS = 25;
-    static BULLET_RADIUS_INCREMENT = 2;
-    static WINS_SCORE_EASY = 300;
-    static WINS_SCORE_MEDIUM = 350;
-    static WINS_SCORE_HARD = 400;
-    static LEVEL_UP_SCORE = 100;
-    static SLOWDOWN_DURATION = 5000;
-    static LEVEL_REST_DURATION = 5000;
-    static SPAWN_MARGIN = 50;
-    static BASE_SPEED = 0.5;
-    static SPEED_INCREMENT = 0.1;
+    // === 遊戲平衡常數 ===
+    static PLAYER_SAFE_ZONE = 60;            // 玩家安全區域半徑 (避免怪物太靠近玩家)
+    static BASE_SPAWN_INTERVAL = 2500;       // 基礎怪物生成間隔 (毫秒)
+    static MIN_SPAWN_INTERVAL = 1000;        // 最小怪物生成間隔 (毫秒)
+    static BASE_GAP = 200;                   // 怪物間基礎垂直間距 (像素)
+    static MIN_GAP = 90;                     // 怪物間最小垂直間距 (像素)
+    static BASE_SPEED = 0.5;                 // 怪物基礎移動速度
+    static SPEED_INCREMENT = 0.1;            // 每擊殺增加的速度倍率
+
+    // === 分數與關卡常數 ===
+    static WINS_SCORE_EASY = 250;            // 簡單難度過關分數
+    static WINS_SCORE_MEDIUM = 350;          // 中等難度過關分數
+    static WINS_SCORE_HARD = 400;            // 困難難度過關分數
+    static LEVEL_UP_SCORE = 100;             // 升一等所需分數
+
+    // === 子彈常數 ===
+    static BULLET_BASE_RADIUS = 5;          // 子彈基礎半徑
+    static BULLET_MAX_RADIUS = 25;           // 子彈最大半徑
+    static BULLET_RADIUS_INCREMENT = 2;      // 答對時子彈半徑增量
+
+    // === 效果持續時間 ===
+    static SLOWDOWN_DURATION = 5000;        // 答錯減速持續時間 (毫秒)
+    static LEVEL_REST_DURATION = 5000;       // 升級後緩衝時間 (毫秒)
+    static VICTORY_BGM_DELAY = 1000;        // 勝利後延遲播放音樂時間 (毫秒)
+
+    // === 生成與位置常數 ===
+    static SPAWN_MARGIN = 50;               // 怪物生成頂部邊距 (像素)
+    static FORCE_SPAWN_COUNT = 3;           // 強制生成怪物的場上數量閾值
+    static FORCE_SPAWN_TIMER = 500;          // 強制生成怪物的計時器閾值 (毫秒)
+    static SPAWN_INTERVAL_DECREMENT = 150;   // 每級減少的生成間隔 (毫秒)
+
+    // === 畫面渲染常數 ===
+    static SCALE_REFERENCE = 600;            // 畫面縮放參考寬度 (像素)
+    static PLAYER_Y_OFFSET = 350;           // 玩家距離底部的偏移量 (像素)
+    static PLAYER_Y_MIN_SCALE = 0.6;        // 玩家縮放最小比例
+    static PLAYER_IMAGE_SIZE = 220;          // 玩家圖片尺寸 (像素)
+    static CLOUD_SPAWN_Y = -150;            // 雲朵生成 Y 座標 (畫布外部)
+    static TEXT_BG_OPACITY = 0.75;          // 算式文字背景透明度
 
     constructor(canvas, callbacks) {
         this.canvas = canvas;
@@ -141,15 +162,15 @@ export class GameEngine {
         this.canvas.width = w;
         this.canvas.height = h;
 
-        // 計算縮放比例 (以 600px 為基準)
-        this.scaleFactor = Math.min(1, w / 600);
+        // 計算縮放比例 (以 SCALE_REFERENCE 為基準)
+        this.scaleFactor = Math.min(1, w / GameEngine.SCALE_REFERENCE);
         
         // 更新快取的字體大小
         this.fontSize = Math.max(16, Math.floor(24 * this.scaleFactor * 1.5));
 
         if (this.entityManager.player) {
             this.entityManager.player.x = w / 2;
-            this.entityManager.player.y = h - (350 * Math.max(0.6, this.scaleFactor));
+            this.entityManager.player.y = h - (GameEngine.PLAYER_Y_OFFSET * Math.max(GameEngine.PLAYER_Y_MIN_SCALE, this.scaleFactor));
         }
         this.draw(); // 暫停時若縮放也需要重繪
     }
@@ -186,7 +207,7 @@ export class GameEngine {
 
         // 設定玩家初始位置
         this.entityManager.player.x = this.width / 2;
-        this.entityManager.player.y = this.height - (350 * Math.max(0.6, this.scaleFactor));
+        this.entityManager.player.y = this.height - (GameEngine.PLAYER_Y_OFFSET * Math.max(GameEngine.PLAYER_Y_MIN_SCALE, this.scaleFactor));
 
 
         this.callbacks.onScore(this.score);
@@ -312,7 +333,7 @@ export class GameEngine {
         if (this.score > this.level * GameEngine.LEVEL_UP_SCORE) {
             this.level++;
             // 等級越高生成間隔越短
-            this.spawnInterval = Math.max(GameEngine.MIN_SPAWN_INTERVAL, GameEngine.BASE_SPAWN_INTERVAL - (this.level * 150));
+            this.spawnInterval = Math.max(GameEngine.MIN_SPAWN_INTERVAL, GameEngine.BASE_SPAWN_INTERVAL - (this.level * GameEngine.SPAWN_INTERVAL_DECREMENT));
             this.levelUpRestTimer = GameEngine.LEVEL_REST_DURATION;
         }
 
@@ -336,7 +357,7 @@ export class GameEngine {
         const canSpawn = (highestY === Infinity) || (highestY > (-GameEngine.SPAWN_MARGIN + minGap));
 
         // 如果場上怪物少於 3 隻且間隔超過 0.5 秒，強制嘗試生成
-        if (currentCount < 3 && this.spawnTimer > 500) {
+        if (currentCount < GameEngine.FORCE_SPAWN_COUNT && this.spawnTimer > GameEngine.FORCE_SPAWN_TIMER) {
             if (canSpawn) {
                 this.spawnMonster();
                 this.spawnTimer = 0;
@@ -497,7 +518,7 @@ export class GameEngine {
         // 延遲 1 秒後播放勝利音樂
         setTimeout(() => {
             SoundManager.playVictoryBGM();
-        }, 1000);
+        }, GameEngine.VICTORY_BGM_DELAY);
     }
 
     /**
@@ -515,8 +536,8 @@ export class GameEngine {
 
         // 如果圖片已載入完成則繪製圖檔
         if (this.playerImage.complete && this.playerImage.naturalWidth !== 0) {
-            const w = 220 * s; // 寬度 (放大)
-            const h = 220 * s; // 高度 (放大)
+            const w = GameEngine.PLAYER_IMAGE_SIZE * s;
+            const h = GameEngine.PLAYER_IMAGE_SIZE * s;
             this.ctx.drawImage(this.playerImage, p.x - w / 2, p.y - h / 2, w, h);
         } else {
             // 降級處理：圖片未載入時仍繪製原本的幾何圖形
@@ -586,7 +607,7 @@ export class GameEngine {
                 const bh = textH;
                 const br = 8;
 
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${GameEngine.TEXT_BG_OPACITY})`;
                 this.ctx.beginPath();
                 this.ctx.moveTo(bx + br, by);
                 this.ctx.lineTo(bx + bw - br, by);
@@ -656,7 +677,7 @@ export class GameEngine {
         const s = this.scaleFactor || 1;
         return {
             x: Math.random() * this.width,
-            y: randomY ? Math.random() * this.height : -150 * s,
+            y: randomY ? Math.random() * this.height : GameEngine.CLOUD_SPAWN_Y * s,
             speed: (Math.random() * 0.05 + 0.02) * s, // 緩慢飄動
             size: (Math.random() * 50 + 50),
             opacity: Math.random() * 0.15 + 0.05,
@@ -677,7 +698,7 @@ export class GameEngine {
             const c = this.clouds[i];
             c.y += c.speed * dt;
             // 飄出畫布後重置到上方
-            if (c.y > this.height + 150 * s) {
+            if (c.y > this.height + GameEngine.CLOUD_SPAWN_Y * s) {
                 this.clouds[i] = this.createCloud(false);
             }
         }

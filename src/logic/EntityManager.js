@@ -5,11 +5,26 @@ import { Collision } from './Collision.js';
  * 負責維護並更新遊戲中的所有物件（怪物、子彈、粒子、玩家）
  */
 export class EntityManager {
+    // === 實體尺寸常數 ===
+    static PLAYER_RADIUS = 30;               // 玩家碰撞半徑 (像素)
+    static MONSTER_RADIUS = 35;              // 怪物碰撞半徑 (像素)
+
+    // === 動畫與移動常數 ===
+    static MONSTER_SCALE_SPEED = 0.05;       // 怪物生成縮放動畫速度
+    static BULLET_SPEED = 15;                // 子彈移動速度
+
+    // === 粒子效果常數 ===
+    static PARTICLE_COUNT = 20;              // 爆炸粒子數量
+    static PARTICLE_MIN_SPEED = 2;           // 粒子最小速度
+    static PARTICLE_SPEED_RANGE = 5;         // 粒子速度範圍
+    static PARTICLE_DECAY_MIN = 0.02;        // 粒子生命衰減最小值
+    static PARTICLE_DECAY_RANGE = 0.03;      // 粒子生命衰減範圍
+
     constructor() {
         this.monsters = [];
         this.bullets = [];
         this.particles = [];
-        this.player = { x: 0, y: 0, radius: 30 };
+        this.player = { x: 0, y: 0, radius: EntityManager.PLAYER_RADIUS };
     }
 
     /**
@@ -28,7 +43,7 @@ export class EntityManager {
     addMonster(data) {
         this.monsters.push({
             ...data,
-            radius: 35,
+            radius: EntityManager.MONSTER_RADIUS,
             scale: 0, // 用於生成時的縮放動畫
             alive: true
         });
@@ -44,7 +59,7 @@ export class EntityManager {
      */
     addBullet(startX, startY, targetX, targetY, radius = 5) {
         const angle = Math.atan2(targetY - startY, targetX - startX);
-        const speed = 15;
+        const speed = EntityManager.BULLET_SPEED;
         this.bullets.push({
             x: startX,
             y: startY,
@@ -63,15 +78,15 @@ export class EntityManager {
      * @param {string} color - 粒子顏色
      */
     createExplosion(x, y, color) {
-        for (let i = 0; i < 20; i++) {
-            const speed = Math.random() * 5 + 2;
+        for (let i = 0; i < EntityManager.PARTICLE_COUNT; i++) {
+            const speed = Math.random() * EntityManager.PARTICLE_SPEED_RANGE + EntityManager.PARTICLE_MIN_SPEED;
             const angle = Math.random() * Math.PI * 2;
             this.particles.push({
                 x, y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 life: 1.0,
-                decay: Math.random() * 0.03 + 0.02,
+                decay: Math.random() * EntityManager.PARTICLE_DECAY_RANGE + EntityManager.PARTICLE_DECAY_MIN,
                 color: color || '#FFA500'
             });
         }
@@ -92,7 +107,7 @@ export class EntityManager {
         // 更新怪物
         for (let m of this.monsters) {
             // 出現時的縮放動畫
-            if (m.scale < 1) m.scale += 0.05 * dt;
+            if (m.scale < 1) m.scale += EntityManager.MONSTER_SCALE_SPEED * dt;
 
             // 當有子彈在飛行時，怪物會暫停移動（增加打擊感與命中率）
             if (!hasActiveBullets) {
